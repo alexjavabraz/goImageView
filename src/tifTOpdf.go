@@ -19,6 +19,7 @@ import (
 func main() {
 	t0 := time.Now()
 	ImageFile := "./000004.tif"
+
 	arquivoPDF := ConverteEGeraPdf(ImageFile)
 	fmt.Printf("Pdf gerado %s \n", arquivoPDF)
 	t1 := time.Now()
