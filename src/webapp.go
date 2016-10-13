@@ -24,44 +24,115 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func handlerImage(w http.ResponseWriter, r *http.Request) {
 
 	Path := r.URL.Query().Get("imagem")
-
 	if Path != "" {
+		nomeCompleto := "g://" + Path
+		arquivoExiste, _ := exists(nomeCompleto)
 
-		fmt.Println(Path)
+		if arquivoExiste {
 
-		nomeCompleto := "Z:\\2016\\10\\05\\1592\\" + Path
+			ImageFileDest := criar(nomeCompleto)
+			arquivoGerado := processImageRequest(ImageFileDest, w, r)
+			defer delete(arquivoGerado)
+			defer delete(ImageFileDest)
 
-		fmt.Println(nomeCompleto)
-
-		pdfFile := conversaoPDF(nomeCompleto)
-
-		fmt.Println(pdfFile)
-
-		img, err := os.Open(pdfFile)
-
-		if err != nil {
-			log.Fatal(err)
+		} else {
+			fmt.Fprintf(w, "File not found %s!", r.URL.Path[1:])
 		}
 
-		defer img.Close()
-		w.Header().Set("Content-Type", "application/pdf")
-		io.Copy(w, img)
 	} else {
 		fmt.Fprintf(w, "Parametro invalido!")
 	}
+}
 
+func criar(ImageFile string) (ImageName string) {
+	fmt.Printf("Salvando %s no repositorio local (temporario) \n", ImageFile)
+
+	r := rand.New(rand.NewSource(99))
+
+	sFile, err := os.Open(ImageFile)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer sFile.Close()
+
+	ImageFileDest := bytes.NewBufferString("")
+	fmt.Fprint(ImageFileDest, "./temp/copiedLocal", r.Float32(), ".tif")
+
+	fmt.Printf("Buscando %s \n", ImageFile)
+
+	eFile, err := os.Create(ImageFileDest.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer eFile.Close()
+
+	_, err = io.Copy(eFile, sFile) // first var shows number of bytes
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = eFile.Sync()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ImageFileDest.String()
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
+}
+
+func delete(ImageName string) {
+	fmt.Printf("Removendo %s \n", ImageName)
+	err := os.Remove(ImageName)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+//
+func processImageRequest(nomeCompleto string, w http.ResponseWriter, r *http.Request) (pdfGerado string) {
+
+	fmt.Printf("Imagem solicitada %s \n", nomeCompleto)
+
+	pdfFile := conversaoPDF(nomeCompleto)
+
+	fmt.Printf("Pdf gerado %s \n", pdfFile)
+
+	img, err := os.Open(pdfFile)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer img.Close()
+	w.Header().Set("Content-Type", "application/pdf")
+	io.Copy(w, img)
+	return pdfFile
 }
 
 func conversaoPDF(ImageFile string) (nomePdf string) {
 	t0 := time.Now()
 	arquivoPDF := ConverteEGeraPdf(ImageFile)
-	fmt.Printf("Pdf gerado %s \n", arquivoPDF)
+
 	t1 := time.Now()
 	fmt.Printf("Total time %v to run. \n", t1.Sub(t0))
 	return arquivoPDF
 }
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/imagem", handlerImage)
 	http.ListenAndServe(":8888", nil)

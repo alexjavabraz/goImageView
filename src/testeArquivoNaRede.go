@@ -7,15 +7,27 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"time"
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+	ImageFile := "g://000001.tif"
+	ImageFileDest := criar(ImageFile)
+
+	delete(ImageFileDest)
+
+}
+
+func criar(ImageFile string) (ImageName string) {
+	fmt.Printf("Criando")
+
 	r := rand.New(rand.NewSource(99))
 
 	ImageFileDest := bytes.NewBufferString("")
 	fmt.Fprint(ImageFileDest, "./temp/copiedLocal", r.Float32(), ".tif")
 
-	ImageFile := "z://000004.tif"
+	fmt.Printf("Buscando %s \n", ImageFile)
 
 	sFile, err := os.Open(ImageFile)
 	if err != nil {
@@ -27,6 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer eFile.Close()
 
 	_, err = io.Copy(eFile, sFile) // first var shows number of bytes
@@ -39,11 +52,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	delete(ImageFileDest.String())
-
+	return ImageFileDest.String()
 }
 
 func delete(ImageName string) {
+	fmt.Printf("Removendo %s \n", ImageName)
 	err := os.Remove(ImageName)
 
 	if err != nil {
