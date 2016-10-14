@@ -74,6 +74,7 @@ func criar(ImageFile string) (ImageName string) {
 	}
 
 	err = eFile.Sync()
+
 	if err != nil {
 		log.Fatal(err)
 	}
